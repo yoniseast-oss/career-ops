@@ -16,6 +16,27 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_REPO="${DATA_REPO:-https://github.com/yoniseast-oss/career-ops-data.git}"
 DATA_DIR="${DATA_DIR:-$(dirname "$REPO_DIR")/career-ops-data}"
 
+# Build an empty-but-valid user layer so a session still works before the
+# private data repo exists. Only fills in what is missing — never clobbers
+# real data on a re-run.
+scaffold_data_root() {
+  mkdir -p "$DATA_DIR"/{config,data,reports,output,jds,interview-prep,documents,writing-samples,modes}
+  for d in data reports output jds interview-prep documents writing-samples; do
+    touch "$DATA_DIR/$d/.gitkeep"
+  done
+  [ -f "$DATA_DIR/config/profile.yml" ] || \
+    cp "$REPO_DIR/config/profile.example.yml" "$DATA_DIR/config/profile.yml"
+  [ -f "$DATA_DIR/portals.yml" ] || \
+    cp "$REPO_DIR/templates/portals.example.yml" "$DATA_DIR/portals.yml"
+  [ -f "$DATA_DIR/data/applications.md" ] || printf '%s\n' \
+    '# Applications Tracker' '' \
+    '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |' \
+    '|---|------|---------|------|-------|--------|-----|--------|-------|' \
+    > "$DATA_DIR/data/applications.md"
+  # doctor.mjs auto-copies modes/_profile.md, _custom.md, _brief.md and
+  # voice-dna.md from their templates on first run, so they are not seeded here.
+}
+
 echo "==> 1/4 Installing dependencies"
 # The postinstall hook runs `playwright install chromium`, which this
 # environment's network policy blocks. The image already ships Chromium, so
@@ -84,9 +105,9 @@ if [ -d "$DATA_DIR/.git" ]; then
 elif git clone -q "$DATA_REPO" "$DATA_DIR" 2>/dev/null; then
   echo "    Cloned $DATA_REPO -> $DATA_DIR"
 else
-  echo "    Could not clone $DATA_REPO."
-  echo "    Create it (private) and push, or set DATA_REPO=<url>."
-  mkdir -p "$DATA_DIR"
+  echo "    Could not clone $DATA_REPO — scaffolding a local data root instead."
+  echo "    Create the repo (private) and push \$DATA_DIR, or set DATA_REPO=<url>."
+  scaffold_data_root
 fi
 
 # The marker makes every career-ops script resolve the user layer out of the
