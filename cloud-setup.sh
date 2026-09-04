@@ -105,10 +105,14 @@ if [ -d "$DATA_DIR/.git" ]; then
 elif git clone -q "$DATA_REPO" "$DATA_DIR" 2>/dev/null; then
   echo "    Cloned $DATA_REPO -> $DATA_DIR"
 else
-  echo "    Could not clone $DATA_REPO — scaffolding a local data root instead."
+  echo "    Could not clone $DATA_REPO."
   echo "    Create the repo (private) and push \$DATA_DIR, or set DATA_REPO=<url>."
-  scaffold_data_root
 fi
+
+# Always run: fills only what is missing, so it completes a freshly-created
+# (README-only) data repo just as well as a bare directory, and is a no-op
+# once the repo carries a real user layer.
+scaffold_data_root
 
 # The marker makes every career-ops script resolve the user layer out of the
 # private repo instead of this public checkout. Relative, so it survives a
